@@ -5,6 +5,7 @@ import xlsxwriter
 from openpyxl import load_workbook
 
 total_xls_path = './excel/total.xlsx'
+file_alpha='./excel/alpha.xlsx'
 files_dir = './data/'
 lst_files = os.listdir(files_dir)
 
@@ -93,26 +94,80 @@ def write_xls(file_path):
     writer.save()
     writer.close()
 
-def find_resonance(file_path):
+def find_resonance(file_path,file_alpha):
     alpha=['alpha_75','alpha_80','alpha_85','alpha_90','alpha_95']
-    xl=pd.ExcelFile(file_path)
-    sheets=xl.sheet_names
+    y1=['Y1_75','Y1_80','Y1_85','Y1_90','Y1_95']
+    xl_file=pd.ExcelFile(file_path)
+    sheets=xl_file.sheet_names
+    #dfs = {sheet_name: xl_file.parse(sheet_name)for sheet_name in xl_file.sheet_names}
+    
+    wb=xlsxwriter.Workbook(file_alpha)
+    ws=wb.add_worksheet('alpha')
+    merge_format = wb.add_format({
+    'align': 'center',})
+    merge_index=1
     for sheet in sheets:
-        print(sheet)
-        df=pd.read_excel(open(file_path, 'rb'),
-              sheet_name=sheet,index_col=0)  
-        alpha_max=[]
-        f_alpha_max=[]
-        for a in [alpha]:
-            alpha_max.append(df[a].max())
-            f_alpha_max.append(df[a].idxmax())
-        print(alpha_max)
-        print(f_alpha_max)
-    wb = load_workbook(file_path)
-    wb.create_sheet('alpha')
-    wb.save(file_path)    
+        ws.merge_range(0,merge_index,0,merge_index+2,sheet,merge_format)   
+        #ws.merge_range(8,merge_index,8,merge_index+2,sheet,merge_format)
+        df=pd.read_excel(file_path,sheet_name=sheet,index_col=0)
+        df_y=df.iloc[:,[1,4,7,10,13]] #срезы по y,alpha,r
+        df_alpha=df.iloc[:,[0,3,6,9,12]]
+        df_r=df.iloc[:,[2,5,8,11,14]]
+        ws.write(1,merge_index,'f(alpha_max)')
+        ws.write(1,merge_index+1,'alpha_max')
+        ws.write(1,merge_index+2,'R(alpha_max')
+        ws.write(9,merge_index,'f(y0)')
+        ws.write(9,merge_index+1,'alpha_max')
+        ws.write(9,merge_index+2,'R(alpha_max')
+        i=2#номер строки для записи
+        df_y_abs=df_y.abs()
+        for a in alpha:
+            #по максимумам alpha
+            alpha_max=df_alpha[a].max()#max alpha
+            alpha_idxmax=df_alpha[a].idxmax()#f(max(alpha))
+            alpha_x=df_alpha.index.get_loc(alpha_idxmax)#indexis
+            alpha_y=df_alpha.columns.get_loc(a)
+            r_alpha=df_r.iloc[alpha_x,alpha_y]#r(max(alpha))
+            ws.write(i,0, a[6:]+'dB')
+            ws.write(i+8,0, a[6:]+'dB')
+            ws.write(i,merge_index,alpha_idxmax)   
+            ws.write(i,merge_index+1,alpha_max)
+            ws.write(i,merge_index+2,r_alpha)    
+            i+=1
+            #-------------------------по пересечению нуля
+        print(df_y_abs)  
+        j=10
+        for y in y1:
+            y_idxmin=df_y_abs[y].idxmin()
+            y_x=df_y_abs.index.get_loc(y_idxmin)
+            y_y=df_y.columns.get_loc(y)
+            
+            y_min=df_y.iloc[y_x,y_y]
+            alpha_y=df_alpha.iloc[y_x,y_y]
+            r_y=df_r.iloc[y_x,y_y]
+
+            ws.write(j,merge_index,y_idxmin)   
+            ws.write(j,merge_index+1,alpha_y)
+            ws.write(j,merge_index+2,r_y)  
+            j+=1 
+            print(y_x,y_idxmin,y_min,alpha_y,r_y)
+
+        merge_index+=3
+        print('------------------new sheet')
+        #print(df_alpha)
+        #print(df_y)
+        #print(df_r)
+
+    wb.close()
+
+
+
+
+
+
+
 
 # TODO: максимум альфа, пересение У
 write_xls(total_xls_path)
-find_resonance(total_xls_path)
+find_resonance(total_xls_path,file_alpha)
 print('Done !')
