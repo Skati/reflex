@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*
 import pandas as pd
 import os
 import xlsxwriter
@@ -9,6 +10,10 @@ file_alpha='./excel/alpha.xlsx'
 files_dir = './data/'
 lst_files = os.listdir(files_dir)
 
+if not os.path.exists('./excel'):
+    os.makedirs('./excel')
+if not os.path.exists('./data'):
+    os.makedirs('./data')
 
 def write_xls(file_path):
     # headers for df
@@ -18,7 +23,7 @@ def write_xls(file_path):
     headers4 = ['alpha_90', 'Y1_90', 'R1_90']
     headers5 = ['alpha_95', 'Y1_95', 'R1_95']
     headers = headers1+headers2+headers3+headers4+headers5
-    writer = pd.ExcelWriter(file_path)
+    writer = pd.ExcelWriter(file_path)# https://github.com/PyCQA/pylint/issues/3060 pylint: disable=abstract-class-instantiated
     workbook = writer.book
 
     for file in lst_files:
@@ -135,14 +140,12 @@ def find_resonance(file_path,file_alpha):
             ws.write(i,merge_index+2,r_alpha)    
             i+=1
             #-------------------------по пересечению нуля
-        print(df_y_abs)  
         j=10
         for y in y1:
             y_idxmin=df_y_abs[y].idxmin()
             y_x=df_y_abs.index.get_loc(y_idxmin)
             y_y=df_y.columns.get_loc(y)
             
-            y_min=df_y.iloc[y_x,y_y]
             alpha_y=df_alpha.iloc[y_x,y_y]
             r_y=df_r.iloc[y_x,y_y]
 
@@ -150,22 +153,10 @@ def find_resonance(file_path,file_alpha):
             ws.write(j,merge_index+1,alpha_y)
             ws.write(j,merge_index+2,r_y)  
             j+=1 
-            print(y_x,y_idxmin,y_min,alpha_y,r_y)
 
         merge_index+=3
-        print('------------------new sheet')
-        #print(df_alpha)
-        #print(df_y)
-        #print(df_r)
 
     wb.close()
-
-
-
-
-
-
-
 
 # TODO: максимум альфа, пересение У
 write_xls(total_xls_path)
